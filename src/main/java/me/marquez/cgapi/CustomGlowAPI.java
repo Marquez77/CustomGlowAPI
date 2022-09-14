@@ -6,6 +6,7 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
@@ -107,15 +108,16 @@ public class CustomGlowAPI {
                 Scoreboard scoreboard = new Scoreboard();
                 PlayerTeam playerTeam = new PlayerTeam(scoreboard, "CGAPI#" + color.name());
                 playerTeam.setPlayerPrefix(Component.literal(color.toString()));
+                playerTeam.setColor(ChatFormatting.getByName(color.name()));
                 return playerTeam;
             });
-            Set<ChatColor> colors = knownColors.computeIfAbsent(receiver, value -> Collections.emptySet());
+            Set<ChatColor> colors = knownColors.computeIfAbsent(receiver, value -> new HashSet<>());
             if (!colors.contains(color)) {
                 colors.add(color);
                 ClientboundSetPlayerTeamPacket createTeamPacket = ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true);
                 packets.add(createTeamPacket);
             }
-            ClientboundSetPlayerTeamPacket addPacket = ClientboundSetPlayerTeamPacket.createPlayerPacket(team, entity instanceof OfflinePlayer ? entity.getName() : entity.getUniqueId().toString(), ClientboundSetPlayerTeamPacket.Action.ADD);
+            ClientboundSetPlayerTeamPacket addPacket = ClientboundSetPlayerTeamPacket.createPlayerPacket(team, target, ClientboundSetPlayerTeamPacket.Action.ADD);
             packets.add(addPacket);
         }
         sendPackets(receiver, packets.toArray(Packet[]::new));
