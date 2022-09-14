@@ -53,9 +53,10 @@ public class CustomGlowAPI {
     public static void unsetGlowing(@Nonnull UUID uuid, @Nonnull Player receiver) {
         entities.remove(new Pair<>(uuid, receiver));
         Optional.ofNullable(Bukkit.getEntity(uuid)).ifPresent(entity -> {
-            glowingData.remove(new Pair<>(entity.getEntityId(), receiver));
             if(entity.getLocation().distance(receiver.getLocation()) <= ENTITY_VIEW_RANGE) {
                 unsetGlowing(entity, receiver);
+            }else {
+                glowingData.remove(new Pair<>(entity.getEntityId(), receiver));
             }
         });
     }
