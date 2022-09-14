@@ -97,7 +97,7 @@ public class CustomGlowAPI {
         String target = entity instanceof OfflinePlayer ? entity.getName() : entity.getUniqueId().toString();
         if(isGlowing(entity, receiver)) {
             ChatColor prevColor = getGlowingColor(entity, receiver);
-            if(prevColor != null && prevColor != color) {
+            if(prevColor != null && prevColor != ChatColor.WHITE && prevColor != color) {
                 PlayerTeam team = teams.get(prevColor);
                 ClientboundSetPlayerTeamPacket removePacket = ClientboundSetPlayerTeamPacket.createPlayerPacket(team, target, ClientboundSetPlayerTeamPacket.Action.REMOVE);
                 packets.add(removePacket);
