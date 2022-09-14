@@ -13,6 +13,7 @@ import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
@@ -27,7 +28,43 @@ import java.util.*;
 public class CustomGlowAPI {
 
     private CustomGlowAPI() {}
+    protected static int ENTITY_VIEW_RANGE = 48;
 
+    //AUTO REGISTER ENTITY_ID WITH UUID
+    private static final Map<Pair<UUID, Player>, ChatColor> entities = new HashMap<>();
+
+    public static boolean isGlowing(UUID uuid, Player receiver) {
+        return entities.containsKey(new Pair<>(uuid, receiver));
+    }
+
+    public static void setGlowing(@Nonnull UUID uuid, @Nonnull ChatColor color, @Nonnull Player receiver) {
+        entities.put(new Pair<>(uuid, receiver), color);
+        Optional.ofNullable(Bukkit.getEntity(uuid)).ifPresent(entity -> {
+            if(entity.getLocation().distance(receiver.getLocation()) <= ENTITY_VIEW_RANGE) {
+                setGlowing(entity, color, receiver);
+            }
+        });
+    }
+
+    public static void setGlowing(@Nonnull UUID uuid, @Nonnull Player receiver) {
+        setGlowing(uuid, ChatColor.WHITE, receiver);
+    }
+
+    public static void unsetGlowing(@Nonnull UUID uuid, @Nonnull Player receiver) {
+        entities.remove(new Pair<>(uuid, receiver));
+        Optional.ofNullable(Bukkit.getEntity(uuid)).ifPresent(entity -> {
+            if(entity.getLocation().distance(receiver.getLocation()) <= ENTITY_VIEW_RANGE) {
+                unsetGlowing(entity, receiver);
+            }
+        });
+    }
+
+    protected static void applyGlowing(UUID uuid, Entity entity, Player receiver) {
+        if(glowingData.containsKey(new Pair<>(entity.getEntityId(), receiver))) return;
+        Optional.ofNullable(entities.get(new Pair<>(uuid, receiver))).ifPresent(color -> setGlowing(entity, color, receiver));
+    }
+
+    //GENERIC GLOWING
     private static final ProtocolManager manager = ProtocolLibrary.getProtocolManager();
     private static final Map<Pair<Integer, Player>, ChatColor> glowingData = new HashMap<>();
 
@@ -84,7 +121,7 @@ public class CustomGlowAPI {
         packet.getWatchableCollectionModifier().write(0, dataWatcher.getWatchableObjects());
     }
 
-    //SCOREBOARD
+    //SCOREBOARD TEAM FOR COLOR GLOWING
     private static final Map<ChatColor, PlayerTeam> teams = new HashMap<>();
     private static final Map<Player, Set<ChatColor>> knownColors = new HashMap<>();
 

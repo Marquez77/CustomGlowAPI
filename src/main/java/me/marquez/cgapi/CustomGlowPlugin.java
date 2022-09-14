@@ -6,17 +6,26 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.world.scores.PlayerTeam;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.NPC;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public class CustomGlowPlugin extends JavaPlugin {
 
@@ -27,6 +36,10 @@ public class CustomGlowPlugin extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+
+        FileConfiguration spigot = YamlConfiguration.loadConfiguration(new File("spigot.yml"));
+        CustomGlowAPI.ENTITY_VIEW_RANGE = spigot.getInt("world-settings.default.entity-tracking-range.players");
+
         ProtocolLibrary.getProtocolManager().addPacketListener(
             new PacketAdapter(this, PacketType.Play.Server.ENTITY_METADATA) {
                 @Override
@@ -43,26 +56,21 @@ public class CustomGlowPlugin extends JavaPlugin {
             }
         );
         ProtocolLibrary.getProtocolManager().addPacketListener(
-                new PacketAdapter(this, PacketType.Play.Server.SCOREBOARD_TEAM) {
-                    @Override
-                    public void onPacketSending(PacketEvent event) {
-                        PacketContainer packet = event.getPacket();
-                        Optional optional = (Optional)packet.getModifier().read(3);
-                        optional.ifPresent(o -> {
-                            ClientboundSetPlayerTeamPacket.Parameters parameters = (ClientboundSetPlayerTeamPacket.Parameters) o;
-                            if(!parameters.getDisplayName().toString().startsWith("literal{CIT-")) {
-                                System.out.println("display: " + parameters.getDisplayName());
-                                System.out.println("prefix: " + parameters.getPlayerPrefix());
-                                System.out.println("suffix: " + parameters.getPlayerSuffix());
-                                System.out.println("color: " + parameters.getColor());
-                                System.out.println("options: " + parameters.getOptions());
-                            }
-                        });
-
-//                        ClientboundSetPlayerTeamPacket.createPlayerPacket()
-//                        PlayerTeam
+            new PacketAdapter(this, PacketType.Play.Server.NAMED_ENTITY_SPAWN) {
+                @Override
+                public void onPacketSending(PacketEvent event) {
+                    if(event.isPlayerTemporary()) return;
+                    PacketContainer container = event.getPacket();
+                    UUID uuid = container.getUUIDs().read(0);
+                    Entity entity = Bukkit.getEntity(uuid);
+                    if(entity != null) {
+                        Player player = event.getPlayer();
+                        if(CustomGlowAPI.isGlowing(uuid, player)) {
+                            CustomGlowAPI.applyGlowing(uuid, entity, player);
+                        }
                     }
                 }
+            }
         );
         getServer().getPluginManager().registerEvents(new Listener() {
             @EventHandler
