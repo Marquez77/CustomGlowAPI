@@ -6,7 +6,6 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
@@ -19,6 +18,8 @@ import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
@@ -37,12 +38,36 @@ public class CustomGlowAPI {
         return glowingData.containsKey(new Pair<>(entityId, receiver));
     }
 
-    public static void setGlowing(Entity entity, Player receiver) {
-        int entityId = entity.getEntityId();
-        glowingData.put(new Pair<>(entityId, receiver), ChatColor.WHITE);
+    @Nullable
+    public static ChatColor getGlowingColor(Entity entity, Player receiver) {
+        return getGlowingColor(entity.getEntityId(), receiver);
+    }
+
+    @Nullable
+    public static ChatColor getGlowingColor(int entityId, Player receiver) {
+        return glowingData.get(new Pair<>(entityId, receiver));
+    }
+
+    public static void setGlowing(@Nonnull Entity entity, @Nonnull ChatColor color, @Nonnull Player receiver) {
+        applyTeam(entity, color, receiver);
+        glowingData.put(new Pair<>(entity.getEntityId(), receiver), color);
+        sendGlowingPacket(entity, receiver, true);
+    }
+
+    public static void setGlowing(@Nonnull Entity entity, @Nonnull Player receiver) {
+        setGlowing(entity, ChatColor.WHITE, receiver);
+    }
+
+    public static void unsetGlowing(@Nonnull Entity entity, @Nonnull Player receiver) {
+        applyTeam(entity, ChatColor.WHITE, receiver);
+        glowingData.remove(new Pair<>(entity.getEntityId(), receiver));
+        sendGlowingPacket(entity, receiver, false);
+    }
+
+    private static void sendGlowingPacket(Entity entity, Player receiver, boolean isGlowing) {
         PacketContainer packet = manager.createPacket(PacketType.Play.Server.ENTITY_METADATA);
-        packet.getIntegers().write(0, entityId);
-        applyGlowing(packet, entity);
+        packet.getIntegers().write(0, entity.getEntityId());
+        applyGlowing(packet, entity, isGlowing);
         try {
             manager.sendServerPacket(receiver.getPlayer(), packet);
         } catch (InvocationTargetException e) {
@@ -50,40 +75,50 @@ public class CustomGlowAPI {
         }
     }
 
-    private static void applyGlowing(PacketContainer packet, Entity entity) {
+    private static void applyGlowing(PacketContainer packet, Entity entity, boolean isGlowing) {
         WrappedDataWatcher dataWatcher = new WrappedDataWatcher();
         dataWatcher.setEntity(entity);
         WrappedDataWatcher.Serializer serializer = WrappedDataWatcher.Registry.get(Byte.class);
-        dataWatcher.setObject(0, serializer, (byte)0x40);
+        dataWatcher.setObject(0, serializer, isGlowing ? (byte)0x40 : (byte)0x00);
         packet.getWatchableCollectionModifier().write(0, dataWatcher.getWatchableObjects());
     }
 
-
     //SCOREBOARD
-    private static Map<ChatColor, PlayerTeam> teams = new HashMap<>();
-    private static Set<Pair<Player, ChatColor>> knownChatColors = new HashSet<>();
+    private static final Map<ChatColor, PlayerTeam> teams = new HashMap<>();
+    private static final Map<Player, Set<ChatColor>> knownColors = new HashMap<>();
 
     protected static void clearColors(Player player) {
-        knownChatColors.remove(player);
+        knownColors.remove(player);
     }
 
-    private static void applyTeam(Entity entity, ChatColor color, Player receiver) {
-        PlayerTeam team = teams.compute(color, (key, value) -> {
-            Scoreboard scoreboard = new Scoreboard();
-            PlayerTeam playerTeam = new PlayerTeam(scoreboard, "CGAPI#" + color.name());
-            playerTeam.setPlayerPrefix(Component.literal(color.toString()));
-            playerTeam.setPlayerSuffix(Component.literal(""));
-            playerTeam.setColor(ChatFormatting.getByName(color.name()));
-            return playerTeam;
-        });
-        Pair<Player, ChatColor> key = new Pair<>(receiver, color);
-        if(!knownChatColors.contains(key)) {
-            knownChatColors.add(key);
-            ClientboundSetPlayerTeamPacket createTeamPacket = ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true);
-            sendPackets(receiver, createTeamPacket);
+    private static void applyTeam(@Nonnull Entity entity, @Nonnull ChatColor color, @Nonnull Player receiver) {
+        List<Packet<?>> packets = new ArrayList<>();
+        String target = entity instanceof OfflinePlayer ? entity.getName() : entity.getUniqueId().toString();
+        if(isGlowing(entity, receiver)) {
+            ChatColor prevColor = getGlowingColor(entity, receiver);
+            if(prevColor != null && prevColor != color) {
+                PlayerTeam team = teams.get(prevColor);
+                ClientboundSetPlayerTeamPacket removePacket = ClientboundSetPlayerTeamPacket.createPlayerPacket(team, target, ClientboundSetPlayerTeamPacket.Action.REMOVE);
+                packets.add(removePacket);
+            }
         }
-        ClientboundSetPlayerTeamPacket addPacket = ClientboundSetPlayerTeamPacket.createPlayerPacket(team, entity instanceof OfflinePlayer ? entity.getName() : entity.getUniqueId().toString(), ClientboundSetPlayerTeamPacket.Action.ADD);
-        sendPackets(receiver, addPacket);
+        if(color != ChatColor.WHITE) {
+            PlayerTeam team = teams.compute(color, (key, value) -> {
+                Scoreboard scoreboard = new Scoreboard();
+                PlayerTeam playerTeam = new PlayerTeam(scoreboard, "CGAPI#" + color.name());
+                playerTeam.setPlayerPrefix(Component.literal(color.toString()));
+                return playerTeam;
+            });
+            Set<ChatColor> colors = knownColors.computeIfAbsent(receiver, value -> Collections.emptySet());
+            if (!colors.contains(color)) {
+                colors.add(color);
+                ClientboundSetPlayerTeamPacket createTeamPacket = ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true);
+                packets.add(createTeamPacket);
+            }
+            ClientboundSetPlayerTeamPacket addPacket = ClientboundSetPlayerTeamPacket.createPlayerPacket(team, entity instanceof OfflinePlayer ? entity.getName() : entity.getUniqueId().toString(), ClientboundSetPlayerTeamPacket.Action.ADD);
+            packets.add(addPacket);
+        }
+        sendPackets(receiver, packets.toArray(Packet[]::new));
     }
 
     private static void sendPackets(Player player, Packet<?>... packets) {
