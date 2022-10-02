@@ -61,9 +61,9 @@ public class CustomGlowAPI {
         });
     }
 
-    protected static void applyGlowing(UUID uuid, Entity entity, Player receiver) {
+    protected static void applyGlowing(UUID uuid, Entity entity, @Nullable ChatColor color, Player receiver) {
         if(glowingData.containsKey(new Pair<>(entity.getEntityId(), receiver))) return;
-        Optional.ofNullable(entities.get(new Pair<>(uuid, receiver))).ifPresent(color -> setGlowing(entity, color, receiver));
+        Optional.ofNullable(entities.get(new Pair<>(uuid, receiver))).ifPresentOrElse(setColor -> setGlowing(entity, setColor, receiver), () -> setGlowing(entity, color == null ? ChatColor.WHITE : color, receiver));
     }
 
     //GENERIC GLOWING

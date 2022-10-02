@@ -7,6 +7,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
@@ -41,7 +42,10 @@ public class CustomGlowPlugin extends JavaPlugin {
         //Default Conditional
         conditions.add((uuid, receiver) -> {
                Entity entity = Bukkit.getEntity(uuid);
-               return (entity != null && CustomGlowAPI.isGlowing(uuid, receiver));
+               if(entity != null && CustomGlowAPI.isGlowing(uuid, receiver)) {
+                   return ChatColor.WHITE;
+               }
+               return null;
            }
        );
 
@@ -85,10 +89,11 @@ public class CustomGlowPlugin extends JavaPlugin {
                         UUID uuid = container.getUUIDs().read(0);
                         Player player = event.getPlayer();
                         for(GlowCondition cond : conditions) {
-                            if(cond.isGlowing(uuid, player)) {
+                            ChatColor color = cond.getGlowingColor(uuid, player);
+                            if(color != null) {
                                 Entity entity = Bukkit.getEntity(uuid);
                                 if(entity != null) {
-                                    CustomGlowAPI.applyGlowing(uuid, entity, player);
+                                    CustomGlowAPI.applyGlowing(uuid, entity, color, player);
                                     break;
                                 }
                             }
