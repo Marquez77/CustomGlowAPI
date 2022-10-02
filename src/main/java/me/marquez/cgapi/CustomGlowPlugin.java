@@ -16,7 +16,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,22 +39,11 @@ public class CustomGlowPlugin extends JavaPlugin {
         registerPacketAdapter();
 
         //Default Conditional
-        conditions.add(new GlowCondition() {
-           @Nullable
-           @Override
-           public Entity getGlowingEntity(UUID uuid, Player receiver) {
+        conditions.add((uuid, receiver) -> {
                Entity entity = Bukkit.getEntity(uuid);
-               if (entity != null && CustomGlowAPI.isGlowing(uuid, receiver)) {
-                   return entity;
-               }
-               return null;
+               return (entity != null && CustomGlowAPI.isGlowing(uuid, receiver));
            }
-
-           @Override
-           public boolean isGlowingById(int entityId, Player receiver) {
-               return CustomGlowAPI.isGlowing(entityId, receiver);
-           }
-       });
+       );
 
         getServer().getPluginManager().registerEvents(new Listener() {
             @EventHandler
@@ -80,13 +68,10 @@ public class CustomGlowPlugin extends JavaPlugin {
                         if (event.isPlayerTemporary()) return;
                         PacketContainer container = event.getPacket();
                         int entityId = container.getIntegers().read(0);
-                        for(GlowCondition cond : conditions) {
-                            if(cond.isGlowingById(entityId, event.getPlayer())) {
-                                List<WrappedWatchableObject> value = container.getWatchableCollectionModifier().read(0);
-                                value.stream().filter(v -> v.getIndex() == 0).forEach(v -> v.setValue((byte) ((byte) v.getValue() | 0x40)));
-                                container.getWatchableCollectionModifier().write(0, value);
-                                break;
-                            }
+                        if(CustomGlowAPI.isGlowing(entityId, event.getPlayer())) {
+                            List<WrappedWatchableObject> value = container.getWatchableCollectionModifier().read(0);
+                            value.stream().filter(v -> v.getIndex() == 0).forEach(v -> v.setValue((byte) ((byte) v.getValue() | 0x40)));
+                            container.getWatchableCollectionModifier().write(0, value);
                         }
                     }
                 }
@@ -100,10 +85,12 @@ public class CustomGlowPlugin extends JavaPlugin {
                         UUID uuid = container.getUUIDs().read(0);
                         Player player = event.getPlayer();
                         for(GlowCondition cond : conditions) {
-                            Entity entity = cond.getGlowingEntity(uuid, player);
-                            if(entity != null) {
-                                CustomGlowAPI.applyGlowing(uuid, entity, player);
-                                break;
+                            if(cond.isGlowing(uuid, player)) {
+                                Entity entity = Bukkit.getEntity(uuid);
+                                if(entity != null) {
+                                    CustomGlowAPI.applyGlowing(uuid, entity, player);
+                                    break;
+                                }
                             }
                         }
                     }
