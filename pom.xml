@@ -6,13 +6,13 @@
 
     <groupId>me.marquez</groupId>
     <artifactId>CustomGlowAPI</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.1</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <minecraft.version>1.19</minecraft.version>
-        <protocollib.version>4.8.0</protocollib.version>
+        <minecraft.version>1.19.4</minecraft.version>
+        <protocollib.version>5.0.0</protocollib.version>
     </properties>
 
     <repositories>

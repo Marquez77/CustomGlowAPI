@@ -16,7 +16,7 @@ import net.minecraft.world.scores.Scoreboard;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
@@ -108,11 +108,7 @@ public class CustomGlowAPI {
         PacketContainer packet = manager.createPacket(PacketType.Play.Server.ENTITY_METADATA);
         packet.getIntegers().write(0, entity.getEntityId());
         applyGlowing(packet, entity, isGlowing);
-        try {
-            manager.sendServerPacket(receiver.getPlayer(), packet);
-        } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
+        manager.sendServerPacket(receiver.getPlayer(), packet);
     }
 
     private static void applyGlowing(PacketContainer packet, Entity entity, boolean isGlowing) {
