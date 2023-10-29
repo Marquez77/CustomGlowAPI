@@ -1,7 +1,7 @@
 # CustomGlowAPI
 - [ProtocolLib](https://github.com/dmulloy2/ProtocolLib/)을 연동하여 클라이언트 단위로 엔티티를 발광시킬 수 있는 API 입니다.
 - 플러그인 적용 시 [ProtocolLib](https://github.com/dmulloy2/ProtocolLib/) 플러그인이 필수로 요구됩니다.
-- 해당 플러그인은 `1.19` 버전 기준으로 개발되어 하위 버전에서는 작동하지 않을 수 있습니다.
+- 해당 플러그인은 `1.19.4` 버전 기준으로 개발되어 하위 버전에서는 작동하지 않을 수 있습니다.
 ---
 > [GlowAPI](https://github.com/InventivetalentDev/GlowAPI) 를 참고하였으며, [GlowAPI](https://github.com/InventivetalentDev/GlowAPI) 의 이하 문제들을 해결하고자 개발한 플러그인입니다.
 > 1. [Citizens](https://github.com/CitizensDev/Citizens2) 의 NPC에게는 발광이 적용되지 않는 문제
