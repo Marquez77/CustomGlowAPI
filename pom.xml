@@ -42,12 +42,12 @@
             <scope>provided</scope>
             <classifier>remapped-mojang</classifier>
         </dependency>
-        <dependency>
-            <groupId>com.comphenix.protocol</groupId>
-            <artifactId>ProtocolLib</artifactId>
-            <version>${protocollib.version}</version>
-            <scope>provided</scope>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.comphenix.protocol</groupId>-->
+<!--            <artifactId>ProtocolLib</artifactId>-->
+<!--            <version>${protocollib.version}</version>-->
+<!--            <scope>provided</scope>-->
+<!--        </dependency>-->
     </dependencies>
 
     <build>

@@ -1,7 +1,10 @@
 name: CustomGlowAPI
 main: me.marquez.cgapi.CustomGlowPlugin
 version: ${version}
-api-version: ${minecraft.version}
+api-version: 1.19
 depend: [ProtocolLib]
 author: DevMarquez
 website: https://github.com/Marquez77/CustomGlowAPI
+commands:
+  gapi:
+    description: The default command of CustomGlowAPI plugin.
